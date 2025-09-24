@@ -157,11 +157,11 @@ class _TambahAcaraPageState extends State<TambahAcaraPage> {
                   Container(
                     decoration: BoxDecoration(
                       color: AppColors.white,
-                      borderRadius: new BorderRadius.circular(10.0),
+                      borderRadius: BorderRadius.circular(10.0),
                       boxShadow: [
                         BoxShadow(
                           offset: Offset(0, 4),
-                          color: AppColors.grey.withOpacity(0.5),
+                          color: AppColors.grey.withAlpha((0.5 * 255).toInt()),
                           blurRadius: 10.0,
                         ),
                       ],
