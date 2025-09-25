@@ -28,9 +28,28 @@ class _HomePageState extends State<HomePage>
   ];
 
   void _navigateToTambahAcara() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const TambahAcaraPage()),
+    // Navigator.push(
+    //   context,
+    //   MaterialPageRoute(builder: (context) => const TambahAcaraPage()),
+    // );
+
+    // Karena TambahAcaraPage berupa modal sehingga perlu showModalBottomSheet
+    showModalBottomSheet(
+      isScrollControlled: true,
+      enableDrag: false,
+      barrierColor: Colors.transparent,
+      isDismissible: false,
+      clipBehavior: Clip.hardEdge,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      context: context,
+      builder: (context) {
+        return SizedBox(
+          height: MediaQuery.of(context).size.height * 0.96,
+          child: TambahAcaraPage(),
+        );
+      },
     );
   }
 
