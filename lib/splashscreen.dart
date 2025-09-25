@@ -158,7 +158,7 @@ class _SplashScreenState extends State<SplashScreen>
                           'Siap Bayar!',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 50,
+                            fontSize: 40,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -169,8 +169,8 @@ class _SplashScreenState extends State<SplashScreen>
                   position: _animasiLogo,
                   child: Image.asset(
                     'assets/logosplash.png',
-                    height: 172,
-                    width: 172,
+                    height: 200,
+                    width: 200,
                   ),
                 ),
               ],
