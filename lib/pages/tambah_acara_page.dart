@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../colors.dart';
+import '../datasources/remote_datasource.dart';
 
 class TambahAcaraPage extends StatefulWidget {
   const TambahAcaraPage({super.key});
@@ -9,6 +10,7 @@ class TambahAcaraPage extends StatefulWidget {
 }
 
 class _TambahAcaraPageState extends State<TambahAcaraPage> {
+  final TextEditingController _namaAcaraController = TextEditingController();
   List<TextEditingController> controllers = [TextEditingController()];
 
   @override
@@ -68,8 +70,51 @@ class _TambahAcaraPageState extends State<TambahAcaraPage> {
                         ),
                         const Spacer(),
                         GestureDetector(
-                          onTap: () {
-                            // TODO: Simpan aksi
+                          onTap: () async {
+                            final nama = _namaAcaraController.text.trim();
+                            if (nama.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Nama acara tidak boleh kosong',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+
+                            final List<String> anggota = controllers
+                                .map((ctrl) => ctrl.text.trim())
+                                .where((name) => name.isNotEmpty)
+                                .toList();
+  
+                            if (anggota.isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Minimal tambahkan 1 anggota'),
+                                ),
+                              );
+                              return;
+                            }
+
+                            try {
+                              final kelompok = await RemoteDataSource()
+                                  .createKelompok(
+                                    namaKelompok: nama,
+                                    anggota: anggota,
+                                  );
+                              if (mounted) {
+                                Navigator.pop(context, true);
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Gagal menyimpan: $e'),
+                                  ),
+                                );
+                              }
+                            }
                           },
                           child: const Text(
                             'Simpan',
@@ -116,8 +161,9 @@ class _TambahAcaraPageState extends State<TambahAcaraPage> {
                               ),
                             ],
                           ),
-                          child: const TextField(
-                            decoration: InputDecoration(
+                          child: TextField(
+                            controller: _namaAcaraController,
+                            decoration: const InputDecoration(
                               hintText: 'Masukan Nama Acara',
                               hintStyle: TextStyle(
                                 color: AppColors.grey,

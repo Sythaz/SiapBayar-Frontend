@@ -45,7 +45,7 @@ class _HasilPerhitunganPageState extends State<HasilPerhitunganPage> {
           ),
         ),
         title: const Text(
-          'Tambah Pengeluaran',
+          'Hasil Perhitungan',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
       ),

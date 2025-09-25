@@ -1,84 +1,96 @@
-class PatunganModel {
+class Anggota {
   int? id;
-  String? namaKelompok;
-  String? deskripsi;
-  List<Anggota>? anggota;
-  List<Pengeluaran>? pengeluaran;
+  String? namaLengkap;
+  String? dibuatPada;
 
-  PatunganModel({
-    this.id,
-    this.namaKelompok,
-    this.deskripsi,
-    this.anggota,
-    this.pengeluaran,
-  });
+  Anggota({this.id, this.namaLengkap, this.dibuatPada});
 
-  PatunganModel.fromJson(Map<String, dynamic> json) {
+  Anggota.fromJson(Map<String, dynamic> json) {
     id = json['id'];
-    namaKelompok = json['namaKelompok'];
-    deskripsi = json['deskripsi'];
-    if (json['anggota'] != null) {
-      anggota = <Anggota>[];
-      json['anggota'].forEach((v) {
-        anggota!.add(Anggota.fromJson(v));
-      });
-    }
-    if (json['pengeluaran'] != null) {
-      pengeluaran = <Pengeluaran>[];
-      json['pengeluaran'].forEach((v) {
-        pengeluaran!.add(Pengeluaran.fromJson(v));
-      });
-    }
+    namaLengkap = json['namaLengkap'];
+    dibuatPada = json['dibuatPada'];
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    data['id'] = id;
-    data['namaKelompok'] = namaKelompok;
-    data['deskripsi'] = deskripsi;
-    if (anggota != null) {
-      data['anggota'] = anggota!.map((v) => v.toJson()).toList();
-    }
-    if (pengeluaran != null) {
-      data['pengeluaran'] = pengeluaran!.map((v) => v.toJson()).toList();
-    }
-    return data;
+    return {'id': id, 'namaLengkap': namaLengkap, 'dibuatPada': dibuatPada};
   }
 }
 
-class Anggota {
+class AnggotaRelasi {
+  int? kelompokId;
+  int? anggotaId;
+  String? bergabungPada;
   Anggota? anggota;
 
-  Anggota({this.anggota});
+  AnggotaRelasi({
+    this.kelompokId,
+    this.anggotaId,
+    this.bergabungPada,
+    this.anggota,
+  });
 
-  Anggota.fromJson(Map<String, dynamic> json) {
+  AnggotaRelasi.fromJson(Map<String, dynamic> json) {
+    kelompokId = json['kelompokId'];
+    anggotaId = json['anggotaId'];
+    bergabungPada = json['bergabungPada'];
     anggota = json['anggota'] != null
         ? Anggota.fromJson(json['anggota'])
         : null;
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    if (anggota != null) {
-      data['anggota'] = anggota!.toJson();
-    }
-    return data;
+    return {
+      'kelompokId': kelompokId,
+      'anggotaId': anggotaId,
+      'bergabungPada': bergabungPada,
+      'anggota': anggota?.toJson(),
+    };
   }
 }
 
-class NamaAnggota {
-  String? namaLengkap;
+class Kelompok {
+  int? id;
+  String? namaKelompok;
+  String? deskripsi;
+  String? dibuatPada;
+  List<AnggotaRelasi>? anggota;
+  List<Pengeluaran>? pengeluaran;
 
-  NamaAnggota({this.namaLengkap});
+  Kelompok({
+    this.id,
+    this.namaKelompok,
+    this.deskripsi,
+    this.dibuatPada,
+    this.anggota,
+    this.pengeluaran,
+  });
 
-  NamaAnggota.fromJson(Map<String, dynamic> json) {
-    namaLengkap = json['namaLengkap'];
+  Kelompok.fromJson(Map<String, dynamic> json) {
+    id = json['id'];
+    namaKelompok = json['namaKelompok'];
+    deskripsi = json['deskripsi'];
+    dibuatPada = json['dibuatPada'];
+    if (json['anggota'] != null) {
+      anggota = (json['anggota'] as List)
+          .map((v) => AnggotaRelasi.fromJson(v))
+          .toList();
+    }
+    if (json['pengeluaran'] != null) {
+      pengeluaran = (json['pengeluaran'] as List)
+          .map((v) => Pengeluaran.fromJson(v))
+          .toList();
+    }
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    data['namaLengkap'] = namaLengkap;
-    return data;
+    return {
+      'id': id,
+      'namaKelompok': namaKelompok,
+      'deskripsi': deskripsi,
+      'dibuatPada': dibuatPada,
+      'anggota': anggota?.map((v) => v.toJson()).toList(),
+      'pengeluaran': pengeluaran?.map((v) => v.toJson()).toList(),
+    };
   }
 }
 
@@ -86,6 +98,9 @@ class Pengeluaran {
   int? id;
   String? deskripsi;
   String? jumlahTotal;
+  String? tanggalPengeluaran;
+  String? dibuatPada;
+  int? kelompokId;
   List<Pembayaran>? pembayaran;
   List<JatahUrunan>? jatahUrunan;
 
@@ -93,6 +108,9 @@ class Pengeluaran {
     this.id,
     this.deskripsi,
     this.jumlahTotal,
+    this.tanggalPengeluaran,
+    this.dibuatPada,
+    this.kelompokId,
     this.pembayaran,
     this.jatahUrunan,
   });
@@ -101,42 +119,52 @@ class Pengeluaran {
     id = json['id'];
     deskripsi = json['deskripsi'];
     jumlahTotal = json['jumlahTotal'];
+    tanggalPengeluaran = json['tanggalPengeluaran'];
+    dibuatPada = json['dibuatPada'];
+    kelompokId = json['kelompokId'];
     if (json['pembayaran'] != null) {
-      pembayaran = <Pembayaran>[];
-      json['pembayaran'].forEach((v) {
-        pembayaran!.add(Pembayaran.fromJson(v));
-      });
+      pembayaran = (json['pembayaran'] as List)
+          .map((e) => Pembayaran.fromJson(e))
+          .toList();
     }
     if (json['jatahUrunan'] != null) {
-      jatahUrunan = <JatahUrunan>[];
-      json['jatahUrunan'].forEach((v) {
-        jatahUrunan!.add(JatahUrunan.fromJson(v));
-      });
+      jatahUrunan = (json['jatahUrunan'] as List)
+          .map((e) => JatahUrunan.fromJson(e))
+          .toList();
     }
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    data['id'] = id;
-    data['deskripsi'] = deskripsi;
-    data['jumlahTotal'] = jumlahTotal;
-    if (pembayaran != null) {
-      data['pembayaran'] = pembayaran!.map((v) => v.toJson()).toList();
-    }
-    if (jatahUrunan != null) {
-      data['jatahUrunan'] = jatahUrunan!.map((v) => v.toJson()).toList();
-    }
-    return data;
+    return {
+      'id': id,
+      'deskripsi': deskripsi,
+      'jumlahTotal': jumlahTotal,
+      'tanggalPengeluaran': tanggalPengeluaran,
+      'dibuatPada': dibuatPada,
+      'kelompokId': kelompokId,
+      'pembayaran': pembayaran?.map((e) => e.toJson()).toList(),
+      'jatahUrunan': jatahUrunan?.map((e) => e.toJson()).toList(),
+    };
   }
 }
 
+// aaaa
 class Pembayaran {
+  int? pengeluaranId;
+  int? anggotaId;
   String? jumlahBayar;
   Anggota? anggota;
 
-  Pembayaran({this.jumlahBayar, this.anggota});
+  Pembayaran({
+    this.pengeluaranId,
+    this.anggotaId,
+    this.jumlahBayar,
+    this.anggota,
+  });
 
   Pembayaran.fromJson(Map<String, dynamic> json) {
+    pengeluaranId = json['pengeluaranId'];
+    anggotaId = json['anggotaId'];
     jumlahBayar = json['jumlahBayar'];
     anggota = json['anggota'] != null
         ? Anggota.fromJson(json['anggota'])
@@ -144,34 +172,51 @@ class Pembayaran {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    data['jumlahBayar'] = jumlahBayar;
-    if (anggota != null) {
-      data['anggota'] = anggota!.toJson();
-    }
-    return data;
+    return {
+      'pengeluaranId': pengeluaranId,
+      'anggotaId': anggotaId,
+      'jumlahBayar': jumlahBayar,
+      'anggota': anggota?.toJson(),
+    };
   }
 }
-
+// aaaaaaa
 class JatahUrunan {
+  int? id;
   String? jumlahJatah;
+  bool? sudahLunas;
+  int? pengeluaranId;
+  int? penanggungId;
   Anggota? penanggung;
 
-  JatahUrunan({this.jumlahJatah, this.penanggung});
+  JatahUrunan({
+    this.id,
+    this.jumlahJatah,
+    this.sudahLunas,
+    this.pengeluaranId,
+    this.penanggungId,
+    this.penanggung,
+  });
 
   JatahUrunan.fromJson(Map<String, dynamic> json) {
+    id = json['id'];
     jumlahJatah = json['jumlahJatah'];
+    sudahLunas = json['sudahLunas'];
+    pengeluaranId = json['pengeluaranId'];
+    penanggungId = json['penanggungId'];
     penanggung = json['penanggung'] != null
         ? Anggota.fromJson(json['penanggung'])
         : null;
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = <String, dynamic>{};
-    data['jumlahJatah'] = jumlahJatah;
-    if (penanggung != null) {
-      data['penanggung'] = penanggung!.toJson();
-    }
-    return data;
+    return {
+      'id': id,
+      'jumlahJatah': jumlahJatah,
+      'sudahLunas': sudahLunas,
+      'pengeluaranId': pengeluaranId,
+      'penanggungId': penanggungId,
+      'penanggung': penanggung?.toJson(),
+    };
   }
 }

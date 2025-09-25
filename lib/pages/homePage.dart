@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:siapbayar/colors.dart';
+import 'package:siapbayar/pages/acara_page.dart';
+import 'package:siapbayar/pages/hasil_perhitungan_page.dart';
 import 'package:siapbayar/pages/searchPage.dart';
 import 'package:siapbayar/pages/tambah_pengeluaran_page.dart';
 import 'package:siapbayar/pages/tambah_acara_page.dart';
+
+import '../datasources/remote_datasource.dart';
+import '../models/patungan_model.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -17,24 +22,12 @@ class _HomePageState extends State<HomePage>
   bool _showFloatingButtons = false;
   late ScrollController _scrollController;
 
-  List<Map<String, dynamic>> _acaraList = [
-    {'nama': 'Pantai Jogja', 'orang': 4, 'pengeluaran': 1},
-    // {'nama': 'Makan Malam', 'orang': 3, 'pengeluaran': 5},
-    // {'nama': 'Konser Musik', 'orang': 2, 'pengeluaran': 7},
-    // {'nama': 'Meeting Kantor', 'orang': 6, 'pengeluaran': 3},
-    // {'nama': 'Liburan Keluarga', 'orang': 5, 'pengeluaran': 10},
-    // {'nama': 'Liburan Keluarga', 'orang': 5, 'pengeluaran': 10},
-    // {'nama': 'Liburan Keluarga', 'orang': 5, 'pengeluaran': 10},
-  ];
+  List<Kelompok> _acaraList = [];
+  bool _isLoading = true;
 
-  void _navigateToTambahAcara() {
-    // Navigator.push(
-    //   context,
-    //   MaterialPageRoute(builder: (context) => const TambahAcaraPage()),
-    // );
-
+  void _navigateToTambahAcara() async {
     // Karena TambahAcaraPage berupa modal sehingga perlu showModalBottomSheet
-    showModalBottomSheet(
+    final result = await showModalBottomSheet(
       isScrollControlled: true,
       enableDrag: false,
       barrierColor: Colors.transparent,
@@ -51,6 +44,12 @@ class _HomePageState extends State<HomePage>
         );
       },
     );
+
+    if (result != null) {
+      setState(() {
+        _loadData();
+      });
+    }
   }
 
   void _navigateToSearch() {
@@ -62,11 +61,39 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  void _navigateToTambahPengeluaran(Map<String, dynamic> acara) {
-    Navigator.push(
+  Future<void> _navigateToTambahPengeluaran(int kelompokId) async {
+    final result = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => TambahPengeluaranPage()),
+      MaterialPageRoute(
+        builder: (context) => TambahPengeluaranPage(
+          isEdit: true,
+          namaKelompok:
+              _acaraList[kelompokId].namaKelompok ?? 'Tidak ditemukan',
+          dibuatPada:
+              _acaraList[kelompokId].dibuatPada ?? '2000-01-01T23:59:59.319Z',
+          anggota: _acaraList[kelompokId].anggota ?? [],
+          pengeluaran: _acaraList[kelompokId].pengeluaran ?? [],
+        ),
+      ),
     );
+
+    if (result == true) {
+      await _loadData(); // refresh dari backend
+    }
+  }
+
+  Future<void> _navigateToAcaraPage(int kelompokId) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            AcaraPage(acaraList: _acaraList ?? [], kelompokId: kelompokId),
+      ),
+    );
+
+    if (result == true) {
+      await _loadData(); // refresh dari backend
+    }
   }
 
   @override
@@ -76,11 +103,36 @@ class _HomePageState extends State<HomePage>
     _scrollController = ScrollController();
     _scrollController.addListener(_scrollListener);
 
+    _loadData();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       setState(() {
         _showContent = true;
       });
     });
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final dataSource = RemoteDataSource();
+      final response = await dataSource.getSiapBayarData();
+
+      print(
+        "Hasil load data: ${response.kelompok?.map((k) => k.toJson()).toList()}",
+      );
+      setState(() {
+        _acaraList = response.kelompok ?? [];
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      // Tampilkan error (opsional)
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal memuat data: $e')));
+    }
   }
 
   void _scrollListener() {
@@ -153,8 +205,8 @@ class _HomePageState extends State<HomePage>
                     child: AnimatedOpacity(
                       duration: const Duration(milliseconds: 500),
                       opacity: _showContent ? 1.0 : 0.0,
-                      child: ListView(
-                        controller: _scrollController,
+                      child: Column(
+                        // controller: _scrollController,
                         children: [
                           // Search bar
                           Material(
@@ -195,7 +247,6 @@ class _HomePageState extends State<HomePage>
                             ),
                           ),
                           const SizedBox(height: 30),
-                          // Judul daftar acara + tombol tambah acara
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -225,85 +276,201 @@ class _HomePageState extends State<HomePage>
                             ],
                           ),
                           const SizedBox(height: 10),
-                          // List acara
-                          ..._acaraList.map((acara) {
-                            return Column(
+                          Expanded(
+                            child: ListView(
+                              controller: _scrollController,
                               children: [
-                                Material(
-                                  elevation: 5,
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(12),
-                                    onTap: () {
-                                      _navigateToTambahPengeluaran(acara);
-                                    },
-                                    child: Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.all(16.0),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: AppColors.grey,
-                                          width: 1.0,
+                                // Judul daftar acara + tombol tambah acara
+                                if (_isLoading)
+                                  const Center(
+                                    child: CircularProgressIndicator(),
+                                  )
+                                else
+                                  ..._acaraList.asMap().entries.map((entry) {
+                                    int index = entry.key;
+                                    Kelompok kelompok = entry.value;
+
+                                    return Column(
+                                      children: [
+                                        Material(
+                                          elevation: 5,
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          child: InkWell(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                            onTap: () {
+                                              // _navigateToTambahPengeluaran(
+                                              //   index,
+                                              // );
+                                              _navigateToAcaraPage(index);
+                                            },
+                                            child: Container(
+                                              width: double.infinity,
+                                              padding: const EdgeInsets.all(
+                                                16.0,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color: AppColors.grey,
+                                                  width: 1.0,
+                                                ),
+                                              ),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    kelompok.namaKelompok ??
+                                                        'Tanpa Nama',
+                                                    style: const TextStyle(
+                                                      fontSize: 20,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  Text(
+                                                    "Jumlah Orang: ${kelompok.anggota?.length ?? 0}",
+                                                    style: const TextStyle(
+                                                      fontSize: 17,
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    "Jumlah Pengeluaran: ${kelompok.pengeluaran?.length ?? 0}",
+                                                    style: const TextStyle(
+                                                      fontSize: 17,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 10),
+                                                  SizedBox(
+                                                    width: double.infinity,
+                                                    child: ElevatedButton(
+                                                      onPressed: () {
+                                                        Navigator.push(
+                                                          context,
+                                                          MaterialPageRoute(
+                                                            builder: (context) {
+                                                              return HasilPerhitunganPage();
+                                                            },
+                                                          ),
+                                                        );
+                                                      },
+                                                      style: ElevatedButton.styleFrom(
+                                                        backgroundColor:
+                                                            AppColors.primary,
+                                                        shape: RoundedRectangleBorder(
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                8,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                      child: const Text(
+                                                        "Lihat Detail",
+                                                        style: TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 16,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            acara['nama'],
-                                            style: const TextStyle(
-                                              fontSize: 20,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            "Jumlah Orang: ${acara['orang']}",
-                                            style: const TextStyle(
-                                              fontSize: 17,
-                                            ),
-                                          ),
-                                          Text(
-                                            "Jumlah Pengeluaran: ${acara['pengeluaran']}",
-                                            style: const TextStyle(
-                                              fontSize: 17,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 10),
-                                          SizedBox(
-                                            width: double.infinity,
-                                            child: ElevatedButton(
-                                              onPressed: () {},
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor:
-                                                    AppColors.primary,
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                ),
-                                              ),
-                                              child: const Text(
-                                                "Total Pengeluaran",
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 20,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                                        const SizedBox(height: 20),
+                                      ],
+                                    );
+                                  }).toList(),
+                                // List acara
+                                // ..._acaraList.map((acara) {
+                                //   return Column(
+                                //     children: [
+                                //       Material(
+                                //         elevation: 5,
+                                //         borderRadius: BorderRadius.circular(12),
+                                //         child: InkWell(
+                                //           borderRadius: BorderRadius.circular(12),
+                                //           onTap: () {
+                                //             _navigateToTambahPengeluaran(acara);
+                                //           },
+                                //           child: Container(
+                                //             width: double.infinity,
+                                //             padding: const EdgeInsets.all(16.0),
+                                //             decoration: BoxDecoration(
+                                //               color: Colors.white,
+                                //               borderRadius: BorderRadius.circular(12),
+                                //               border: Border.all(
+                                //                 color: AppColors.grey,
+                                //                 width: 1.0,
+                                //               ),
+                                //             ),
+                                //             child: Column(
+                                //               crossAxisAlignment:
+                                //                   CrossAxisAlignment.start,
+                                //               children: [
+                                //                 Text(
+                                //                   acara['nama'],
+                                //                   style: const TextStyle(
+                                //                     fontSize: 20,
+                                //                     fontWeight: FontWeight.w600,
+                                //                   ),
+                                //                 ),
+                                //                 const SizedBox(height: 8),
+                                //                 Text(
+                                //                   "Jumlah Orang: ${acara['orang']}",
+                                //                   style: const TextStyle(
+                                //                     fontSize: 17,
+                                //                   ),
+                                //                 ),
+                                //                 Text(
+                                //                   "Jumlah Pengeluaran: ${acara['pengeluaran']}",
+                                //                   style: const TextStyle(
+                                //                     fontSize: 17,
+                                //                   ),
+                                //                 ),
+                                //                 const SizedBox(height: 10),
+                                //                 SizedBox(
+                                //                   width: double.infinity,
+                                //                   child: ElevatedButton(
+                                //                     onPressed: () {},
+                                //                     style: ElevatedButton.styleFrom(
+                                //                       backgroundColor:
+                                //                           AppColors.primary,
+                                //                       shape: RoundedRectangleBorder(
+                                //                         borderRadius:
+                                //                             BorderRadius.circular(8),
+                                //                       ),
+                                //                     ),
+                                //                     child: const Text(
+                                //                       "Total Pengeluaran",
+                                //                       style: TextStyle(
+                                //                         color: Colors.white,
+                                //                         fontSize: 20,
+                                //                       ),
+                                //                     ),
+                                //                   ),
+                                //                 ),
+                                //               ],
+                                //             ),
+                                //           ),
+                                //         ),
+                                //       ),
+                                //       const SizedBox(height: 20),
+                                //     ],
+                                //   );
+                                // }).toList(),
                                 const SizedBox(height: 20),
                               ],
-                            );
-                          }).toList(),
-                          const SizedBox(height: 20),
+                            ),
+                          ),
                         ],
                       ),
                     ),

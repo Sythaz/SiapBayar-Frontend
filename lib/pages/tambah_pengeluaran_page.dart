@@ -1,21 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:siapbayar/colors.dart';
+import 'package:siapbayar/datasources/remote_datasource.dart'
+    show RemoteDataSource;
+import 'package:siapbayar/models/patungan_model.dart';
 
 class TambahPengeluaranPage extends StatefulWidget {
-  const TambahPengeluaranPage({super.key});
+  final bool isEdit;
+  final String namaKelompok;
+  final List<AnggotaRelasi> anggota;
+  final String dibuatPada;
+  final List<Pengeluaran> pengeluaran;
+
+  const TambahPengeluaranPage({
+    super.key,
+    required this.isEdit,
+    required this.namaKelompok,
+    required this.dibuatPada,
+    required this.anggota,
+    required this.pengeluaran,
+  });
 
   @override
   State<TambahPengeluaranPage> createState() => _TambahPengeluaranPageState();
 }
 
 class _TambahPengeluaranPageState extends State<TambahPengeluaranPage> {
-  // Untuk dropdown pembayar dari backend nanti
-  final List<String> _anggotaAcara = [
-    'Orang 1',
-    'Orang 2',
-    'Orang 3',
-    'Orang 4',
-  ];
+  // Untuk dropdown pembayar dan pembeli
+  List<String> get _daftarNamaAnggota {
+    return widget.anggota
+        .map((relasi) => relasi.anggota?.namaLengkap ?? 'Tanpa Nama')
+        .toList();
+  }
+
+  List<String> get _daftarPembayar {
+    return widget.anggota
+        .map((relasi) => relasi.anggota?.namaLengkap ?? 'Tanpa Nama')
+        .toList();
+  }
+
+  List<String> get _daftarPembeli {
+    return widget.anggota
+        .map((relasi) => relasi.anggota?.namaLengkap ?? 'Tanpa Nama')
+        .toList();
+  }
 
   // Untuk nama acara
   final TextEditingController _namaAcaraController = TextEditingController();
@@ -25,10 +52,10 @@ class _TambahPengeluaranPageState extends State<TambahPengeluaranPage> {
   TimeOfDay? _selectedTime;
 
   // Untuk pembayar terpilih
-  List<String?> pembayarController = [null];
+  List<String?> pembayarController = [];
   List<TextEditingController> nominalController = [TextEditingController()];
 
-  List<String?> pembeliController = [null];
+  List<String?> pembeliController = [];
 
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
@@ -79,11 +106,171 @@ class _TambahPengeluaranPageState extends State<TambahPengeluaranPage> {
     }
   }
 
+  Future<void> _simpanPengeluaran() async {
+    // Validasi input
+    if (_namaAcaraController.text.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Nama acara wajib diisi')));
+      return;
+    }
+
+    if (pembayarController.isEmpty ||
+        pembayarController.any((p) => p == null)) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Pilih pembayar')));
+      return;
+    }
+
+    // Validasi nominal
+    int total = 0;
+    for (var controller in nominalController) {
+      if (controller.text.isEmpty) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Nominal wajib diisi')));
+        return;
+      }
+      // Hapus titik ribuan jika ada (misal: "1.000.000" -> "1000000")
+      String cleanNominal = controller.text.replaceAll('.', '');
+      total += int.tryParse(cleanNominal) ?? 0;
+    }
+
+    // Mapping nama ke ID
+    Map<String, int> namaToId = {};
+    for (var relasi in widget.anggota) {
+      if (relasi.anggota?.namaLengkap != null) {
+        namaToId[relasi.anggota!.namaLengkap!] = relasi.anggotaId!;
+      }
+    }
+
+    // Siapkan data pembayaran
+    List<Map<String, dynamic>> pembayaran = [];
+    for (int i = 0; i < pembayarController.length; i++) {
+      String? nama = pembayarController[i];
+      if (nama != null && namaToId.containsKey(nama)) {
+        pembayaran.add({
+          'anggotaId': namaToId[nama],
+          'jumlahBayar': nominalController[i].text.replaceAll('.', ''),
+        });
+      }
+    }
+
+    // Siapkan data jatah urunan
+    List<Map<String, dynamic>> jatahUrunan = [];
+    for (String? nama in pembeliController) {
+      if (nama != null && namaToId.containsKey(nama)) {
+        jatahUrunan.add({
+          'penanggungId': namaToId[nama],
+          'jumlahJatah': (total / pembeliController.length).toStringAsFixed(0),
+        });
+      }
+    }
+
+    // Format tanggal yang benar (ISO 8601)
+    String formatTanggal() {
+      return '${_selectedDate!.year}-'
+          '${_selectedDate!.month.toString().padLeft(2, '0')}-'
+          '${_selectedDate!.day.toString().padLeft(2, '0')}T'
+          '${_selectedTime!.hour.toString().padLeft(2, '0')}:'
+          '${_selectedTime!.minute.toString().padLeft(2, '0')}:00.000Z';
+    }
+
+    // Siapkan data untuk dikirim
+    Map<String, dynamic> dataKirim = {
+      'deskripsi': _namaAcaraController.text,
+      'jumlahTotal': total.toString(),
+      'tanggalPengeluaran': formatTanggal(),
+      'pembayaran': pembayaran,
+      'jatahUrunan': jatahUrunan,
+    };
+
+    // Untuk mode EDIT, tambahkan ID di body
+    if (widget.isEdit) {
+      dataKirim['id'] = widget.pengeluaran[0].id;
+    }
+    // Untuk mode TAMBAH, tambahkan kelompokId
+    else {
+      dataKirim['kelompokId'] = widget.anggota[0].kelompokId;
+    }
+
+    // DEBUG: Print data lengkap
+    print('Data yang dikirim ke API:');
+    print(dataKirim);
+
+    try {
+      final dataSource = RemoteDataSource();
+
+      if (widget.isEdit) {
+        await dataSource.editPengeluaran(
+          id: widget.pengeluaran[0].id!,
+          deskripsi: _namaAcaraController.text,
+          jumlahTotal: total.toString(),
+          tanggalPengeluaran: formatTanggal(),
+          pembayaran: pembayaran,
+          jatahUrunan: jatahUrunan,
+        );
+      } else {
+        await dataSource.createPengeluaran(
+          kelompokId: widget.anggota[0].kelompokId!,
+          deskripsi: _namaAcaraController.text,
+          jumlahTotal: total.toString(),
+          tanggalPengeluaran: formatTanggal(),
+          pembayaran: pembayaran,
+          jatahUrunan: jatahUrunan,
+        );
+      }
+
+      Navigator.pop(context, true);
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal menyimpan...')));
+      print('Error detail: $e');
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    _selectedDate = DateTime.now();
-    _selectedTime = TimeOfDay.now();
+    _selectedDate = DateTime.parse(widget.dibuatPada);
+    final dateTime = DateTime.parse(widget.dibuatPada).toLocal();
+    _selectedTime = TimeOfDay(hour: dateTime.hour, minute: dateTime.minute);
+
+    if (widget.isEdit && widget.pengeluaran.isNotEmpty) {
+      // Mode EDIT: isi dari data pengeluaran
+      Pengeluaran pengeluaran = widget.pengeluaran[0];
+
+      // Isi pembayar
+      pembayarController = pengeluaran.pembayaran!
+          .map((p) => p.anggota?.namaLengkap)
+          .toList();
+      nominalController = pengeluaran.pembayaran!
+          .map((p) => TextEditingController(text: p.jumlahBayar))
+          .toList();
+
+      // Isi pembeli
+      pembeliController = pengeluaran.jatahUrunan!
+          .map((j) => j.penanggung?.namaLengkap)
+          .toList();
+    } else {
+      if (widget.anggota.isNotEmpty) {
+        String namaPertama =
+            widget.anggota[0].anggota?.namaLengkap ?? 'Tanpa Nama';
+        pembayarController = [namaPertama];
+        pembeliController = [namaPertama];
+        nominalController = [TextEditingController()];
+      } else {
+        pembayarController = [null];
+        pembeliController = [null];
+        nominalController = [TextEditingController()];
+      }
+    }
+
+    if (widget.namaKelompok.isNotEmpty) {
+      _namaAcaraController.text = widget.namaKelompok;
+    }
   }
 
   @override
@@ -111,17 +298,15 @@ class _TambahPengeluaranPageState extends State<TambahPengeluaranPage> {
             icon: const Icon(Icons.arrow_back_ios),
           ),
         ),
-        title: const Text(
-          'Tambah Pengeluaran',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        title: Text(
+          widget.isEdit ? 'Edit Pengeluaran' : 'Tambah Pengeluaran',
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 20),
             child: GestureDetector(
-              onTap: () {
-                // TODO: Implementasi save function
-              },
+              onTap: () => _simpanPengeluaran(),
               child: const Text(
                 'Simpan',
                 style: TextStyle(fontSize: 14, color: AppColors.primary),
@@ -302,7 +487,7 @@ class _TambahPengeluaranPageState extends State<TambahPengeluaranPage> {
                       IconButton(
                         onPressed: () {
                           if (pembayarController.length <
-                              _anggotaAcara.length) {
+                              _daftarNamaAnggota.length) {
                             setState(() {
                               pembayarController.add(null);
                               nominalController.add(TextEditingController());
@@ -376,20 +561,20 @@ class _TambahPengeluaranPageState extends State<TambahPengeluaranPage> {
                                     pembayarController[i] = value;
                                   });
                                 },
-                                items: _anggotaAcara
+                                items: _daftarNamaAnggota
                                     .where(
-                                      (option) =>
-                                          !pembayarController.contains(
-                                            option,
-                                          ) ||
-                                          pembayarController[i] == option,
+                                      (nama) =>
+                                          !pembayarController.contains(nama) ||
+                                          pembayarController[i] == nama,
                                     )
                                     .map(
-                                      (String option) =>
-                                          DropdownMenuItem<String>(
-                                            value: option,
-                                            child: Text(option),
-                                          ),
+                                      (String nama) => DropdownMenuItem<String>(
+                                        value: nama,
+                                        child: Text(
+                                          nama,
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
+                                      ),
                                     )
                                     .toList(),
                               ),
@@ -445,7 +630,8 @@ class _TambahPengeluaranPageState extends State<TambahPengeluaranPage> {
                       ),
                       IconButton(
                         onPressed: () {
-                          if (pembeliController.length < _anggotaAcara.length) {
+                          if (pembeliController.length <
+                              _daftarNamaAnggota.length) {
                             setState(() {
                               pembeliController.add(null);
                             });
@@ -516,18 +702,20 @@ class _TambahPengeluaranPageState extends State<TambahPengeluaranPage> {
                                     pembeliController[i] = value;
                                   });
                                 },
-                                items: _anggotaAcara
+                                items: _daftarNamaAnggota
                                     .where(
-                                      (option) =>
-                                          !pembeliController.contains(option) ||
-                                          pembeliController[i] == option,
+                                      (nama) =>
+                                          !pembeliController.contains(nama) ||
+                                          pembeliController[i] == nama,
                                     )
                                     .map(
-                                      (String option) =>
-                                          DropdownMenuItem<String>(
-                                            value: option,
-                                            child: Text(option),
-                                          ),
+                                      (String nama) => DropdownMenuItem<String>(
+                                        value: nama,
+                                        child: Text(
+                                          nama,
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
+                                      ),
                                     )
                                     .toList(),
                               ),
