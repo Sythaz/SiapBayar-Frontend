@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:siapbayar/colors.dart';
-import 'package:siapbayar/models/patungan_model.dart';
 
 class SearchPage extends StatefulWidget {
   final List<Map<String, dynamic>> acaraList;
@@ -96,7 +95,7 @@ class _SearchPageState extends State<SearchPage> {
                   // Search box
                   Material(
                     elevation: 5,
-                    shadowColor: Colors.black.withOpacity(0.2),
+                    shadowColor: AppColors.black.withAlpha((0.2 * 255).toInt()),
                     borderRadius: BorderRadius.circular(30),
                     child: TextField(
                       controller: _searchController,
@@ -168,7 +167,7 @@ class _SearchPageState extends State<SearchPage> {
             left: 20,
             bottom: 20,
             child: Material(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withAlpha((0.9 * 255).toInt()),
               shape: const CircleBorder(),
               elevation: 5,
               child: IconButton(

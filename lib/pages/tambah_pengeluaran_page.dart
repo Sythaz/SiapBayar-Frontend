@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:siapbayar/colors.dart';
 
+import '../datasources/remote_datasource.dart';
 import '../models/patungan_model.dart';
 
 class TambahPengeluaranPage extends StatefulWidget {
   final bool isEdit;
   final List<dynamic> anggotaList;
+  final int? kelompokId;
   final String? namaKelompok;
   final String? dibuatPada;
   final Pengeluaran? pengeluaran;
@@ -14,6 +16,7 @@ class TambahPengeluaranPage extends StatefulWidget {
     super.key,
     required this.isEdit,
     required this.anggotaList,
+    this.kelompokId,
     this.namaKelompok,
     this.dibuatPada,
     this.pengeluaran,
@@ -24,6 +27,8 @@ class TambahPengeluaranPage extends StatefulWidget {
 }
 
 class _TambahPengeluaranPageState extends State<TambahPengeluaranPage> {
+  final RemoteDataSource _remoteDataSource = RemoteDataSource();
+
   // Untuk nama acara
   final TextEditingController _namaAcaraController = TextEditingController();
 
@@ -31,13 +36,15 @@ class _TambahPengeluaranPageState extends State<TambahPengeluaranPage> {
 
   List<String>? anggotaList;
 
+  int? kelompokId;
+
   // Untuk tanggal dan waktu
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
 
   // Untuk pembayar terpilih
   List<String?> pembayarController = [];
-  List<TextEditingController> nominalController = [TextEditingController()];
+  List<TextEditingController> nominalController = [];
 
   List<String?> pembeliController = [];
 
@@ -94,6 +101,9 @@ class _TambahPengeluaranPageState extends State<TambahPengeluaranPage> {
   void initState() {
     super.initState();
 
+    // Inisialisasi id kelompok/acara
+    kelompokId = widget.kelompokId;
+
     // Inisialisasi nama anggota
     anggotaList = (widget.anggotaList)
         .cast<Map<String, dynamic>>()
@@ -110,7 +120,7 @@ class _TambahPengeluaranPageState extends State<TambahPengeluaranPage> {
 
       pembayarController.add(null);
       nominalController.add(TextEditingController());
-      
+
       pembeliController.add(null);
     }
 
@@ -174,7 +184,7 @@ class _TambahPengeluaranPageState extends State<TambahPengeluaranPage> {
             padding: const EdgeInsets.only(right: 20),
             child: GestureDetector(
               onTap: () {
-                // _simpanPengeluaran(),
+                _simpanPengeluaran();
               },
               child: const Text(
                 'Simpan',
@@ -609,5 +619,208 @@ class _TambahPengeluaranPageState extends State<TambahPengeluaranPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _simpanPengeluaran() async {
+    // Validasi input lainnya (nama acara, tanggal, dll.) tetap seperti sebelumnya
+    if (_namaAcaraController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Deskripsi pengeluaran tidak boleh kosong.'),
+        ),
+      );
+      return;
+    }
+    if (_selectedDate == null || _selectedTime == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tanggal dan waktu harus dipilih.')),
+      );
+      return;
+    }
+    if (pembayarController.isEmpty ||
+        pembayarController.every((element) => element == null)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Minimal satu pembayar harus dipilih.')),
+      );
+      return;
+    }
+    if (pembeliController.isEmpty ||
+        pembeliController.every((element) => element == null)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Minimal satu pembeli harus dipilih.')),
+      );
+      return;
+    }
+
+    // Gabungkan tanggal dan waktu
+    final selectedDateTime = DateTime(
+      _selectedDate!.year,
+      _selectedDate!.month,
+      _selectedDate!.day,
+      _selectedTime!.hour,
+      _selectedTime!.minute,
+    );
+
+    // Validasi nominal
+    double totalInput = 0.0;
+    for (int i = 0; i < nominalController.length; i++) {
+      final nominalText = nominalController[i].text.trim();
+      if (nominalText.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nominal pembayaran tidak boleh kosong.'),
+          ),
+        );
+        return;
+      }
+      try {
+        final nominal = double.parse(nominalText);
+        if (nominal <= 0) {
+          throw FormatException(); // Anggap nominal <= 0 sebagai format salah
+        }
+        totalInput += nominal;
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nominal pembayaran harus berupa angka positif.'),
+          ),
+        );
+        return;
+      }
+    }
+
+    // Buat list pembayaran dan jatah urunan
+    List<Map<String, dynamic>> pembayaranList = [];
+    List<Map<String, dynamic>> jatahUrunanList = [];
+
+    for (int i = 0; i < pembayarController.length; i++) {
+      final namaPembayar = pembayarController[i];
+      final nominal = nominalController[i].text.trim();
+      if (namaPembayar != null && nominal.isNotEmpty) {
+        // Pastikan nama dan nominal tidak null/empty
+        // Cari ID anggota berdasarkan nama
+        final anggotaMap = widget.anggotaList.firstWhere(
+          (e) => e['anggota']['namaLengkap'] == namaPembayar,
+          orElse: () => null, // Kembalikan null jika tidak ditemukan
+        );
+
+        // Perbaiki pengecekan dan pengambilan anggotaId dari anggota['anggotaId']
+        if (anggotaMap != null &&
+            anggotaMap['anggota'] != null &&
+            anggotaMap['anggota']['id'] != null) {
+          pembayaranList.add({
+            'anggotaId': anggotaMap['anggota']['id'],
+            'jumlahBayar': nominal,
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('ID anggota tidak ditemukan untuk: $namaPembayar'),
+            ),
+          );
+          return;
+        }
+      }
+    }
+
+    for (int i = 0; i < pembeliController.length; i++) {
+      final namaPembeli = pembeliController[i];
+      if (namaPembeli != null) {
+        // Pastikan nama pembeli tidak null
+        final anggotaMap = widget.anggotaList.firstWhere(
+          (e) => e['anggota']['namaLengkap'] == namaPembeli,
+          orElse: () => null, // Kembalikan null jika tidak ditemukan
+        );
+
+        // Perbaiki pengecekan dan pengambilan anggotaId dari anggota['anggotaId']
+        if (anggotaMap != null &&
+            anggotaMap['anggota'] != null &&
+            anggotaMap['anggota']['id'] != null) {
+          double jumlahJatah = totalInput / pembeliController.length;
+          jatahUrunanList.add({
+            'penanggungId': anggotaMap['anggota']['id'],
+            'jumlahJatah': jumlahJatah.toStringAsFixed(2),
+            'sudahLunas': false,
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('ID anggota tidak ditemukan untuk: $namaPembeli'),
+            ),
+          );
+          return;
+        }
+      }
+    }
+
+    // Pastikan ada data pembayaran dan jatah urunan setelah validasi ID
+    if (pembayaranList.isEmpty || jatahUrunanList.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Data pembayaran atau jatah urunan tidak lengkap setelah validasi ID anggota.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    // Pastikan widget.kelompokId tidak null
+    if (widget.kelompokId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ID Kelompok tidak ditemukan.')),
+      );
+      return;
+    }
+
+    try {
+      Pengeluaran savedPengeluaran;
+      if (widget.isEdit && widget.pengeluaran != null) {
+        // Panggil fungsi update
+        savedPengeluaran = await _remoteDataSource.updatePengeluaran(
+          pengeluaranId: widget.pengeluaran!.id!,
+          kelompokId: widget.kelompokId!,
+          deskripsi: _namaAcaraController.text,
+          jumlahTotal: totalInput.toStringAsFixed(2),
+          tanggalPengeluaran: selectedDateTime,
+          pembayaran: pembayaranList,
+          jatahUrunan: jatahUrunanList,
+        );
+        // Tampilkan pesan sukses update
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Pengeluaran "${savedPengeluaran.deskripsi}" berhasil diperbarui.',
+            ),
+          ),
+        );
+      } else {
+        // Panggil fungsi create
+        savedPengeluaran = await _remoteDataSource.createPengeluaran(
+          kelompokId: widget.kelompokId!,
+          deskripsi: _namaAcaraController.text,
+          jumlahTotal: totalInput.toStringAsFixed(2),
+          tanggalPengeluaran: selectedDateTime,
+          pembayaran: pembayaranList,
+          jatahUrunan: jatahUrunanList,
+        );
+        // Tampilkan pesan sukses create
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Pengeluaran "${savedPengeluaran.deskripsi}" berhasil ditambahkan.',
+            ),
+          ),
+        );
+      }
+
+      // Pop kembali ke halaman sebelumnya setelah sukses
+      Navigator.pop(context, savedPengeluaran);
+    } catch (e) {
+      print('Error menyimpan pengeluaran: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal menyimpan pengeluaran: $e')),
+      );
+    }
   }
 }

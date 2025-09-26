@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:siapbayar/colors.dart';
+import 'package:siapbayar/datasources/remote_datasource.dart';
 import 'package:siapbayar/models/patungan_model.dart';
 import 'package:siapbayar/pages/tambah_pengeluaran_page.dart';
+
+import '../helpers/format_bulan.dart';
+import '../helpers/format_rupiah.dart';
 
 class AcaraPage extends StatefulWidget {
   final Map<String, dynamic> dataAcara;
@@ -17,26 +21,43 @@ class AcaraPage extends StatefulWidget {
 class _AcaraPageState extends State<AcaraPage> {
   late Map<String, dynamic> _dataAcara;
   late List<Pengeluaran> daftarPengeluaran;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _dataAcara = widget.dataAcara;
+    _fetchPengeluaran();
+  }
 
-    final dataPengeluaran = _dataAcara['pengeluaran'] ?? [];
-    daftarPengeluaran = (dataPengeluaran as List)
-        .map((e) => Pengeluaran.fromMap(e as Map<String, dynamic>))
-        .toList();
+  Future<void> _fetchPengeluaran() async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      final response = await RemoteDataSource().getData();
+      _dataAcara = response.firstWhere((e) => e['id'] == _dataAcara['id']);
+      final dataPengeluaran = _dataAcara['pengeluaran'] ?? [];
+      daftarPengeluaran = (dataPengeluaran as List)
+          .map((e) => Pengeluaran.fromMap(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      print('Error fetching pengeluaran: $e');
+    }
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.grey[100],
+        backgroundColor: AppColors.background,
         elevation: 0,
         leading: IconButton(
+          padding: const EdgeInsets.only(left: 25),
           icon: Icon(Icons.arrow_back_ios, color: Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
@@ -51,7 +72,7 @@ class _AcaraPageState extends State<AcaraPage> {
         centerTitle: true,
       ),
       body: Padding(
-        padding: EdgeInsets.all(16),
+        padding: EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -88,34 +109,36 @@ class _AcaraPageState extends State<AcaraPage> {
                       color: Colors.grey[300],
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: (_dataAcara['anggota'] as List).length,
-                      itemBuilder: (context, index) {
-                        final data = _dataAcara['anggota'];
+                    child: _isLoading
+                        ? Center(child: CircularProgressIndicator())
+                        : ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: (_dataAcara['anggota'] as List).length,
+                            itemBuilder: (context, index) {
+                              final data = _dataAcara['anggota'];
 
-                        return Container(
-                          margin: EdgeInsets.only(
-                            right: index == data.length - 1 ? 8 : 8,
-                            left: index == 0 ? 8 : 0,
-                            top: 8,
-                            bottom: 8,
+                              return Container(
+                                margin: EdgeInsets.only(
+                                  right: index == data.length - 1 ? 8 : 8,
+                                  left: index == 0 ? 8 : 0,
+                                  top: 8,
+                                  bottom: 8,
+                                ),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[400],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  data[index]['anggota']['namaLengkap'],
+                                  style: TextStyle(color: AppColors.black),
+                                ),
+                              );
+                            },
                           ),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[400],
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            data[index]['anggota']['namaLengkap'],
-                            style: TextStyle(color: AppColors.black),
-                          ),
-                        );
-                      },
-                    ),
                   ),
                 ),
               ],
@@ -127,9 +150,8 @@ class _AcaraPageState extends State<AcaraPage> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: () {
-                  // Aksi tambah pengeluaran
-                  Navigator.push(
+                onPressed: () async {
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => TambahPengeluaranPage(
@@ -138,6 +160,9 @@ class _AcaraPageState extends State<AcaraPage> {
                       ),
                     ),
                   );
+                  if (result != null) {
+                    await _fetchPengeluaran();
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFF2D5A5A),
@@ -171,7 +196,9 @@ class _AcaraPageState extends State<AcaraPage> {
 
             // Daftar Pengeluaran List
             Expanded(
-              child: daftarPengeluaran.isEmpty
+              child: _isLoading
+                  ? Center(child: CircularProgressIndicator())
+                  : daftarPengeluaran.isEmpty
                   ? Center(
                       child: Text(
                         'Belum ada pengeluaran',
@@ -200,7 +227,7 @@ class _AcaraPageState extends State<AcaraPage> {
       try {
         final dt = pengeluaran.dibuatPada!;
         tanggal =
-            '${dt.day} ${_bulanIndo(dt.month)}, ${dt.year}, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+            '${dt.day} ${bulanIndo(dt.month)}, ${dt.year}, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
       } catch (_) {
         tanggal = pengeluaran.dibuatPada!.toIso8601String();
       }
@@ -210,7 +237,7 @@ class _AcaraPageState extends State<AcaraPage> {
 
     // Format total
     String total = pengeluaran.jumlahTotal != null
-        ? _formatRupiah(pengeluaran.jumlahTotal!)
+        ? formatRupiah(pengeluaran.jumlahTotal!)
         : '-';
 
     // Nama pembayar
@@ -229,18 +256,24 @@ class _AcaraPageState extends State<AcaraPage> {
         : '-';
 
     return InkWell(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => TambahPengeluaranPage(
-            isEdit: true,
-            namaKelompok: deskripsiPembelian,
-            dibuatPada: tanggal,
-            pengeluaran: pengeluaran,
-            anggotaList: _dataAcara['anggota'],
+      onTap: () async {
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TambahPengeluaranPage(
+              isEdit: true,
+              anggotaList: _dataAcara['anggota'],
+              kelompokId: _dataAcara['id'],
+              namaKelompok: deskripsiPembelian,
+              dibuatPada: tanggal,
+              pengeluaran: pengeluaran,
+            ),
           ),
-        ),
-      ),
+        );
+        if (result != null) {
+          await _fetchPengeluaran();
+        }
+      },
       child: Container(
         margin: EdgeInsets.only(bottom: 12),
         padding: EdgeInsets.all(10),
@@ -353,7 +386,7 @@ class _AcaraPageState extends State<AcaraPage> {
             SizedBox(height: 16),
 
             // Tombol Lihat Detail
-            Container(
+            SizedBox(
               width: double.infinity,
               height: 40,
               child: OutlinedButton(
@@ -421,34 +454,4 @@ class _AcaraPageState extends State<AcaraPage> {
       },
     );
   }
-}
-
-// Helper format bulan Indonesia
-String _bulanIndo(int bulan) {
-  const namaBulan = [
-    '',
-    'Januari',
-    'Februari',
-    'Maret',
-    'April',
-    'Mei',
-    'Juni',
-    'Juli',
-    'Agustus',
-    'September',
-    'Oktober',
-    'November',
-    'Desember',
-  ];
-  return namaBulan[bulan];
-}
-
-// Helper format rupiah
-String _formatRupiah(String nominal) {
-  if (nominal.isEmpty) return '-';
-  final angka = int.tryParse(nominal.replaceAll('.', '')) ?? 0;
-  return angka.toString().replaceAllMapped(
-    RegExp(r'\B(?=(\d{3})+(?!\d))'),
-    (match) => '.',
-  );
 }

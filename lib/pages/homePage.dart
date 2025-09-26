@@ -21,7 +21,7 @@ class _HomePageState extends State<HomePage>
   late ScrollController _scrollController;
 
   List<Map<String, dynamic>> _acaraList = [];
-  bool _isLoading = true;
+  bool _isLoading = false;
 
   void _navigateToTambahAcara() async {
     // Karena TambahAcaraPage berupa modal sehingga perlu showModalBottomSheet
@@ -44,9 +44,8 @@ class _HomePageState extends State<HomePage>
     );
 
     if (result != null) {
-      setState(() {
-        _loadData();
-      });
+      await _loadData();
+      print('sudah load');
     }
   }
 
@@ -59,40 +58,14 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  // Future<void> _navigateToTambahPengeluaran(int kelompokId) async {
-  //   final result = await Navigator.push(
-  //     context,
-  //     MaterialPageRoute(
-  //       builder: (context) => TambahPengeluaranPage(
-  //         isEdit: true,
-  //         namaKelompok:
-  //             _acaraList[kelompokId]['namaKelompok'] ?? 'Tidak ditemukan',
-  //         dibuatPada:
-  //             // TODO: Uncomment setelah API dibuatPada ada
-  //             _acaraList[kelompokId]['dibuatPada'] ??
-  //             '2000-01-01T23:59:59.319Z',
-  //         anggota: _acaraList[kelompokId]['anggota'] ?? [],
-  //         pengeluaran: _acaraList[kelompokId]['pengeluaran'] ?? [],
-  //       ),
-  //     ),
-  //   );
-
-  //   if (result == true) {
-  //     await _loadData(); // refresh dari backend
-  //   }
-  // }
-
   Future<void> _navigateToAcaraPage(int kelompokId) async {
-    final result = await Navigator.push(
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AcaraPage(dataAcara: _acaraList[kelompokId]),
       ),
     );
-
-    if (result == true) {
-      await _loadData(); // refresh dari backend
-    }
+    await _loadData();
   }
 
   @override
@@ -112,13 +85,12 @@ class _HomePageState extends State<HomePage>
   }
 
   Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+    });
     try {
       final dataSource = RemoteDataSource();
       final response = await dataSource.getData();
-
-      // Cek data yang diterima
-      print('Data yang diterima _loadData: $response');
-
       setState(() {
         _acaraList = response;
         _isLoading = false;
@@ -127,7 +99,6 @@ class _HomePageState extends State<HomePage>
       setState(() {
         _isLoading = false;
       });
-      // Tampilkan error (opsional)
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Gagal memuat data: $e')));
@@ -210,7 +181,9 @@ class _HomePageState extends State<HomePage>
                           // Search bar
                           Material(
                             elevation: 5,
-                            shadowColor: Colors.black.withOpacity(0.1),
+                            shadowColor: AppColors.black.withAlpha(
+                              (0.1 * 255).toInt(),
+                            ),
                             borderRadius: BorderRadius.circular(30),
                             child: Container(
                               decoration: BoxDecoration(
@@ -353,7 +326,10 @@ class _HomePageState extends State<HomePage>
                                                           context,
                                                           MaterialPageRoute(
                                                             builder: (context) {
-                                                              return HasilPerhitunganPage();
+                                                              return HasilPerhitunganPage(
+                                                                idAcara:
+                                                                    kelompok['id'],
+                                                              );
                                                             },
                                                           ),
                                                         );
@@ -369,7 +345,7 @@ class _HomePageState extends State<HomePage>
                                                         ),
                                                       ),
                                                       child: const Text(
-                                                        "Lihat Detail",
+                                                        "Lihat Hasil Perhitungan",
                                                         style: TextStyle(
                                                           color: Colors.white,
                                                           fontSize: 16,
@@ -411,7 +387,7 @@ class _HomePageState extends State<HomePage>
                 duration: const Duration(milliseconds: 300),
                 child: Material(
                   elevation: 6,
-                  shadowColor: Colors.black.withOpacity(0.15),
+                  shadowColor: AppColors.black.withAlpha((0.15 * 255).toInt()),
                   borderRadius: BorderRadius.circular(30),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(30),

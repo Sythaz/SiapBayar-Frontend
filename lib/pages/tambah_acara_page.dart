@@ -231,9 +231,9 @@ class _TambahAcaraPageState extends State<TambahAcaraPage> {
                                   fillColor: AppColors.white,
                                 ),
                                 trailingIcon: const Icon(Icons.arrow_drop_down),
-                                onSelected: (value) {
-                                  // TODO: handle selection
-                                },
+                                // onSelected: (value) {
+                                //   // Gunakan saat ada mata uang selain rupiah
+                                // },
                                 initialSelection: 'rupiah',
                                 menuStyle: MenuStyle(
                                   padding: const WidgetStatePropertyAll(
