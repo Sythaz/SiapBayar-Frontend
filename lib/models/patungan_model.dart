@@ -1,222 +1,173 @@
-class Anggota {
-  int? id;
-  String? namaLengkap;
-  String? dibuatPada;
+import 'dart:convert';
 
-  Anggota({this.id, this.namaLengkap, this.dibuatPada});
+class PatunganModel {
+    final int? id;
+    final String? namaKelompok;
+    final String? deskripsi;
+    final DateTime? dibuatPada;
+    final List<AnggotaElement>? anggota;
+    final List<Pengeluaran>? pengeluaran;
 
-  Anggota.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    namaLengkap = json['namaLengkap'];
-    dibuatPada = json['dibuatPada'];
-  }
+    PatunganModel({
+        this.id,
+        this.namaKelompok,
+        this.deskripsi,
+        this.dibuatPada,
+        this.anggota,
+        this.pengeluaran,
+    });
 
-  Map<String, dynamic> toJson() {
-    return {'id': id, 'namaLengkap': namaLengkap, 'dibuatPada': dibuatPada};
-  }
+    factory PatunganModel.fromJson(String str) => PatunganModel.fromMap(json.decode(str));
+
+    String toJson() => json.encode(toMap());
+
+    factory PatunganModel.fromMap(Map<String, dynamic> json) => PatunganModel(
+        id: json["id"],
+        namaKelompok: json["namaKelompok"],
+        deskripsi: json["deskripsi"],
+        dibuatPada: json["dibuatPada"] == null ? null : DateTime.parse(json["dibuatPada"]),
+        anggota: json["anggota"] == null ? [] : List<AnggotaElement>.from(json["anggota"]!.map((x) => AnggotaElement.fromMap(x))),
+        pengeluaran: json["pengeluaran"] == null ? [] : List<Pengeluaran>.from(json["pengeluaran"]!.map((x) => Pengeluaran.fromMap(x))),
+    );
+
+    Map<String, dynamic> toMap() => {
+        "id": id,
+        "namaKelompok": namaKelompok,
+        "deskripsi": deskripsi,
+        "dibuatPada": dibuatPada?.toIso8601String(),
+        "anggota": anggota == null ? [] : List<dynamic>.from(anggota!.map((x) => x.toMap())),
+        "pengeluaran": pengeluaran == null ? [] : List<dynamic>.from(pengeluaran!.map((x) => x.toMap())),
+    };
 }
 
-class AnggotaRelasi {
-  int? kelompokId;
-  int? anggotaId;
-  String? bergabungPada;
-  Anggota? anggota;
+class AnggotaElement {
+    final PenanggungClass? anggota;
 
-  AnggotaRelasi({
-    this.kelompokId,
-    this.anggotaId,
-    this.bergabungPada,
-    this.anggota,
-  });
+    AnggotaElement({
+        this.anggota,
+    });
 
-  AnggotaRelasi.fromJson(Map<String, dynamic> json) {
-    kelompokId = json['kelompokId'];
-    anggotaId = json['anggotaId'];
-    bergabungPada = json['bergabungPada'];
-    anggota = json['anggota'] != null
-        ? Anggota.fromJson(json['anggota'])
-        : null;
-  }
+    factory AnggotaElement.fromJson(String str) => AnggotaElement.fromMap(json.decode(str));
 
-  Map<String, dynamic> toJson() {
-    return {
-      'kelompokId': kelompokId,
-      'anggotaId': anggotaId,
-      'bergabungPada': bergabungPada,
-      'anggota': anggota?.toJson(),
+    String toJson() => json.encode(toMap());
+
+    factory AnggotaElement.fromMap(Map<String, dynamic> json) => AnggotaElement(
+        anggota: json["anggota"] == null ? null : PenanggungClass.fromMap(json["anggota"]),
+    );
+
+    Map<String, dynamic> toMap() => {
+        "anggota": anggota?.toMap(),
     };
-  }
 }
 
-class Kelompok {
-  int? id;
-  String? namaKelompok;
-  String? deskripsi;
-  String? dibuatPada;
-  List<AnggotaRelasi>? anggota;
-  List<Pengeluaran>? pengeluaran;
+class PenanggungClass {
+    final String? namaLengkap;
+    final DateTime? dibuatPada;
 
-  Kelompok({
-    this.id,
-    this.namaKelompok,
-    this.deskripsi,
-    this.dibuatPada,
-    this.anggota,
-    this.pengeluaran,
-  });
+    PenanggungClass({
+        this.namaLengkap,
+        this.dibuatPada,
+    });
 
-  Kelompok.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    namaKelompok = json['namaKelompok'];
-    deskripsi = json['deskripsi'];
-    dibuatPada = json['dibuatPada'];
-    if (json['anggota'] != null) {
-      anggota = (json['anggota'] as List)
-          .map((v) => AnggotaRelasi.fromJson(v))
-          .toList();
-    }
-    if (json['pengeluaran'] != null) {
-      pengeluaran = (json['pengeluaran'] as List)
-          .map((v) => Pengeluaran.fromJson(v))
-          .toList();
-    }
-  }
+    factory PenanggungClass.fromJson(String str) => PenanggungClass.fromMap(json.decode(str));
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'namaKelompok': namaKelompok,
-      'deskripsi': deskripsi,
-      'dibuatPada': dibuatPada,
-      'anggota': anggota?.map((v) => v.toJson()).toList(),
-      'pengeluaran': pengeluaran?.map((v) => v.toJson()).toList(),
+    String toJson() => json.encode(toMap());
+
+    factory PenanggungClass.fromMap(Map<String, dynamic> json) => PenanggungClass(
+        namaLengkap: json["namaLengkap"],
+        dibuatPada: json["dibuatPada"] == null ? null : DateTime.parse(json["dibuatPada"]),
+    );
+
+    Map<String, dynamic> toMap() => {
+        "namaLengkap": namaLengkap,
+        "dibuatPada": dibuatPada?.toIso8601String(),
     };
-  }
 }
 
 class Pengeluaran {
-  int? id;
-  String? deskripsi;
-  String? jumlahTotal;
-  String? tanggalPengeluaran;
-  String? dibuatPada;
-  int? kelompokId;
-  List<Pembayaran>? pembayaran;
-  List<JatahUrunan>? jatahUrunan;
+    final int? id;
+    final String? deskripsi;
+    final String? jumlahTotal;
+    final DateTime? dibuatPada;
+    final List<Pembayaran>? pembayaran;
+    final List<JatahUrunan>? jatahUrunan;
 
-  Pengeluaran({
-    this.id,
-    this.deskripsi,
-    this.jumlahTotal,
-    this.tanggalPengeluaran,
-    this.dibuatPada,
-    this.kelompokId,
-    this.pembayaran,
-    this.jatahUrunan,
-  });
+    Pengeluaran({
+        this.id,
+        this.deskripsi,
+        this.jumlahTotal,
+        this.dibuatPada,
+        this.pembayaran,
+        this.jatahUrunan,
+    });
 
-  Pengeluaran.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    deskripsi = json['deskripsi'];
-    jumlahTotal = json['jumlahTotal'];
-    tanggalPengeluaran = json['tanggalPengeluaran'];
-    dibuatPada = json['dibuatPada'];
-    kelompokId = json['kelompokId'];
-    if (json['pembayaran'] != null) {
-      pembayaran = (json['pembayaran'] as List)
-          .map((e) => Pembayaran.fromJson(e))
-          .toList();
-    }
-    if (json['jatahUrunan'] != null) {
-      jatahUrunan = (json['jatahUrunan'] as List)
-          .map((e) => JatahUrunan.fromJson(e))
-          .toList();
-    }
-  }
+    factory Pengeluaran.fromJson(String str) => Pengeluaran.fromMap(json.decode(str));
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'deskripsi': deskripsi,
-      'jumlahTotal': jumlahTotal,
-      'tanggalPengeluaran': tanggalPengeluaran,
-      'dibuatPada': dibuatPada,
-      'kelompokId': kelompokId,
-      'pembayaran': pembayaran?.map((e) => e.toJson()).toList(),
-      'jatahUrunan': jatahUrunan?.map((e) => e.toJson()).toList(),
+    String toJson() => json.encode(toMap());
+
+    factory Pengeluaran.fromMap(Map<String, dynamic> json) => Pengeluaran(
+        id: json["id"],
+        deskripsi: json["deskripsi"],
+        jumlahTotal: json["jumlahTotal"],
+        dibuatPada: json["dibuatPada"] == null ? null : DateTime.parse(json["dibuatPada"]),
+        pembayaran: json["pembayaran"] == null ? [] : List<Pembayaran>.from(json["pembayaran"]!.map((x) => Pembayaran.fromMap(x))),
+        jatahUrunan: json["jatahUrunan"] == null ? [] : List<JatahUrunan>.from(json["jatahUrunan"]!.map((x) => JatahUrunan.fromMap(x))),
+    );
+
+    Map<String, dynamic> toMap() => {
+        "id": id,
+        "deskripsi": deskripsi,
+        "jumlahTotal": jumlahTotal,
+        "dibuatPada": dibuatPada?.toIso8601String(),
+        "pembayaran": pembayaran == null ? [] : List<dynamic>.from(pembayaran!.map((x) => x.toMap())),
+        "jatahUrunan": jatahUrunan == null ? [] : List<dynamic>.from(jatahUrunan!.map((x) => x.toMap())),
     };
-  }
 }
 
-// aaaa
-class Pembayaran {
-  int? pengeluaranId;
-  int? anggotaId;
-  String? jumlahBayar;
-  Anggota? anggota;
-
-  Pembayaran({
-    this.pengeluaranId,
-    this.anggotaId,
-    this.jumlahBayar,
-    this.anggota,
-  });
-
-  Pembayaran.fromJson(Map<String, dynamic> json) {
-    pengeluaranId = json['pengeluaranId'];
-    anggotaId = json['anggotaId'];
-    jumlahBayar = json['jumlahBayar'];
-    anggota = json['anggota'] != null
-        ? Anggota.fromJson(json['anggota'])
-        : null;
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'pengeluaranId': pengeluaranId,
-      'anggotaId': anggotaId,
-      'jumlahBayar': jumlahBayar,
-      'anggota': anggota?.toJson(),
-    };
-  }
-}
-// aaaaaaa
 class JatahUrunan {
-  int? id;
-  String? jumlahJatah;
-  bool? sudahLunas;
-  int? pengeluaranId;
-  int? penanggungId;
-  Anggota? penanggung;
+    final String? jumlahJatah;
+    final PenanggungClass? penanggung;
 
-  JatahUrunan({
-    this.id,
-    this.jumlahJatah,
-    this.sudahLunas,
-    this.pengeluaranId,
-    this.penanggungId,
-    this.penanggung,
-  });
+    JatahUrunan({
+        this.jumlahJatah,
+        this.penanggung,
+    });
 
-  JatahUrunan.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    jumlahJatah = json['jumlahJatah'];
-    sudahLunas = json['sudahLunas'];
-    pengeluaranId = json['pengeluaranId'];
-    penanggungId = json['penanggungId'];
-    penanggung = json['penanggung'] != null
-        ? Anggota.fromJson(json['penanggung'])
-        : null;
-  }
+    factory JatahUrunan.fromJson(String str) => JatahUrunan.fromMap(json.decode(str));
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'jumlahJatah': jumlahJatah,
-      'sudahLunas': sudahLunas,
-      'pengeluaranId': pengeluaranId,
-      'penanggungId': penanggungId,
-      'penanggung': penanggung?.toJson(),
+    String toJson() => json.encode(toMap());
+
+    factory JatahUrunan.fromMap(Map<String, dynamic> json) => JatahUrunan(
+        jumlahJatah: json["jumlahJatah"],
+        penanggung: json["penanggung"] == null ? null : PenanggungClass.fromMap(json["penanggung"]),
+    );
+
+    Map<String, dynamic> toMap() => {
+        "jumlahJatah": jumlahJatah,
+        "penanggung": penanggung?.toMap(),
     };
-  }
+}
+
+class Pembayaran {
+    final String? jumlahBayar;
+    final PenanggungClass? anggota;
+
+    Pembayaran({
+        this.jumlahBayar,
+        this.anggota,
+    });
+
+    factory Pembayaran.fromJson(String str) => Pembayaran.fromMap(json.decode(str));
+
+    String toJson() => json.encode(toMap());
+
+    factory Pembayaran.fromMap(Map<String, dynamic> json) => Pembayaran(
+        jumlahBayar: json["jumlahBayar"],
+        anggota: json["anggota"] == null ? null : PenanggungClass.fromMap(json["anggota"]),
+    );
+
+    Map<String, dynamic> toMap() => {
+        "jumlahBayar": jumlahBayar,
+        "anggota": anggota?.toMap(),
+    };
 }
