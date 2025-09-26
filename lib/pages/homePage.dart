@@ -3,11 +3,9 @@ import 'package:siapbayar/colors.dart';
 import 'package:siapbayar/pages/acara_page.dart';
 import 'package:siapbayar/pages/hasil_perhitungan_page.dart';
 import 'package:siapbayar/pages/searchPage.dart';
-import 'package:siapbayar/pages/tambah_pengeluaran_page.dart';
 import 'package:siapbayar/pages/tambah_acara_page.dart';
 
 import '../datasources/remote_datasource.dart';
-import '../models/patungan_model.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -22,7 +20,7 @@ class _HomePageState extends State<HomePage>
   bool _showFloatingButtons = false;
   late ScrollController _scrollController;
 
-  List<Kelompok> _acaraList = [];
+  List<Map<String, dynamic>> _acaraList = [];
   bool _isLoading = true;
 
   void _navigateToTambahAcara() async {
@@ -61,33 +59,34 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  Future<void> _navigateToTambahPengeluaran(int kelompokId) async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => TambahPengeluaranPage(
-          isEdit: true,
-          namaKelompok:
-              _acaraList[kelompokId].namaKelompok ?? 'Tidak ditemukan',
-          dibuatPada:
-              _acaraList[kelompokId].dibuatPada ?? '2000-01-01T23:59:59.319Z',
-          anggota: _acaraList[kelompokId].anggota ?? [],
-          pengeluaran: _acaraList[kelompokId].pengeluaran ?? [],
-        ),
-      ),
-    );
+  // Future<void> _navigateToTambahPengeluaran(int kelompokId) async {
+  //   final result = await Navigator.push(
+  //     context,
+  //     MaterialPageRoute(
+  //       builder: (context) => TambahPengeluaranPage(
+  //         isEdit: true,
+  //         namaKelompok:
+  //             _acaraList[kelompokId]['namaKelompok'] ?? 'Tidak ditemukan',
+  //         dibuatPada:
+  //             // TODO: Uncomment setelah API dibuatPada ada
+  //             _acaraList[kelompokId]['dibuatPada'] ??
+  //             '2000-01-01T23:59:59.319Z',
+  //         anggota: _acaraList[kelompokId]['anggota'] ?? [],
+  //         pengeluaran: _acaraList[kelompokId]['pengeluaran'] ?? [],
+  //       ),
+  //     ),
+  //   );
 
-    if (result == true) {
-      await _loadData(); // refresh dari backend
-    }
-  }
+  //   if (result == true) {
+  //     await _loadData(); // refresh dari backend
+  //   }
+  // }
 
   Future<void> _navigateToAcaraPage(int kelompokId) async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) =>
-            AcaraPage(acaraList: _acaraList ?? [], kelompokId: kelompokId),
+        builder: (context) => AcaraPage(dataAcara: _acaraList[kelompokId]),
       ),
     );
 
@@ -115,13 +114,13 @@ class _HomePageState extends State<HomePage>
   Future<void> _loadData() async {
     try {
       final dataSource = RemoteDataSource();
-      final response = await dataSource.getSiapBayarData();
+      final response = await dataSource.getData();
 
-      print(
-        "Hasil load data: ${response.kelompok?.map((k) => k.toJson()).toList()}",
-      );
+      // Cek data yang diterima
+      print('Data yang diterima _loadData: $response');
+
       setState(() {
-        _acaraList = response.kelompok ?? [];
+        _acaraList = response;
         _isLoading = false;
       });
     } catch (e) {
@@ -288,7 +287,8 @@ class _HomePageState extends State<HomePage>
                                 else
                                   ..._acaraList.asMap().entries.map((entry) {
                                     int index = entry.key;
-                                    Kelompok kelompok = entry.value;
+                                    Map<String, dynamic> kelompok =
+                                        _acaraList[index];
 
                                     return Column(
                                       children: [
@@ -302,9 +302,6 @@ class _HomePageState extends State<HomePage>
                                               12,
                                             ),
                                             onTap: () {
-                                              // _navigateToTambahPengeluaran(
-                                              //   index,
-                                              // );
                                               _navigateToAcaraPage(index);
                                             },
                                             child: Container(
@@ -326,7 +323,7 @@ class _HomePageState extends State<HomePage>
                                                     CrossAxisAlignment.start,
                                                 children: [
                                                   Text(
-                                                    kelompok.namaKelompok ??
+                                                    kelompok['namaKelompok'] ??
                                                         'Tanpa Nama',
                                                     style: const TextStyle(
                                                       fontSize: 20,
@@ -336,13 +333,13 @@ class _HomePageState extends State<HomePage>
                                                   ),
                                                   const SizedBox(height: 8),
                                                   Text(
-                                                    "Jumlah Orang: ${kelompok.anggota?.length ?? 0}",
+                                                    "Jumlah Orang: ${(kelompok['anggota'] as List?)?.length ?? 0}",
                                                     style: const TextStyle(
                                                       fontSize: 17,
                                                     ),
                                                   ),
                                                   Text(
-                                                    "Jumlah Pengeluaran: ${kelompok.pengeluaran?.length ?? 0}",
+                                                    "Jumlah Pengeluaran: ${(kelompok['pengeluaran'] as List).length}",
                                                     style: const TextStyle(
                                                       fontSize: 17,
                                                     ),
@@ -388,85 +385,7 @@ class _HomePageState extends State<HomePage>
                                         const SizedBox(height: 20),
                                       ],
                                     );
-                                  }).toList(),
-                                // List acara
-                                // ..._acaraList.map((acara) {
-                                //   return Column(
-                                //     children: [
-                                //       Material(
-                                //         elevation: 5,
-                                //         borderRadius: BorderRadius.circular(12),
-                                //         child: InkWell(
-                                //           borderRadius: BorderRadius.circular(12),
-                                //           onTap: () {
-                                //             _navigateToTambahPengeluaran(acara);
-                                //           },
-                                //           child: Container(
-                                //             width: double.infinity,
-                                //             padding: const EdgeInsets.all(16.0),
-                                //             decoration: BoxDecoration(
-                                //               color: Colors.white,
-                                //               borderRadius: BorderRadius.circular(12),
-                                //               border: Border.all(
-                                //                 color: AppColors.grey,
-                                //                 width: 1.0,
-                                //               ),
-                                //             ),
-                                //             child: Column(
-                                //               crossAxisAlignment:
-                                //                   CrossAxisAlignment.start,
-                                //               children: [
-                                //                 Text(
-                                //                   acara['nama'],
-                                //                   style: const TextStyle(
-                                //                     fontSize: 20,
-                                //                     fontWeight: FontWeight.w600,
-                                //                   ),
-                                //                 ),
-                                //                 const SizedBox(height: 8),
-                                //                 Text(
-                                //                   "Jumlah Orang: ${acara['orang']}",
-                                //                   style: const TextStyle(
-                                //                     fontSize: 17,
-                                //                   ),
-                                //                 ),
-                                //                 Text(
-                                //                   "Jumlah Pengeluaran: ${acara['pengeluaran']}",
-                                //                   style: const TextStyle(
-                                //                     fontSize: 17,
-                                //                   ),
-                                //                 ),
-                                //                 const SizedBox(height: 10),
-                                //                 SizedBox(
-                                //                   width: double.infinity,
-                                //                   child: ElevatedButton(
-                                //                     onPressed: () {},
-                                //                     style: ElevatedButton.styleFrom(
-                                //                       backgroundColor:
-                                //                           AppColors.primary,
-                                //                       shape: RoundedRectangleBorder(
-                                //                         borderRadius:
-                                //                             BorderRadius.circular(8),
-                                //                       ),
-                                //                     ),
-                                //                     child: const Text(
-                                //                       "Total Pengeluaran",
-                                //                       style: TextStyle(
-                                //                         color: Colors.white,
-                                //                         fontSize: 20,
-                                //                       ),
-                                //                     ),
-                                //                   ),
-                                //                 ),
-                                //               ],
-                                //             ),
-                                //           ),
-                                //         ),
-                                //       ),
-                                //       const SizedBox(height: 20),
-                                //     ],
-                                //   );
-                                // }).toList(),
+                                  }),
                                 const SizedBox(height: 20),
                               ],
                             ),

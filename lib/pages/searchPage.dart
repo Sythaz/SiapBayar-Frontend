@@ -3,7 +3,7 @@ import 'package:siapbayar/colors.dart';
 import 'package:siapbayar/models/patungan_model.dart';
 
 class SearchPage extends StatefulWidget {
-  final List<Kelompok> acaraList;
+  final List<Map<String, dynamic>> acaraList;
 
   const SearchPage({super.key, required this.acaraList});
 
@@ -13,7 +13,7 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
-  List<Kelompok> _filteredAcara = [];
+  List<Map<String, dynamic>> _filteredAcara = [];
   bool _hasTyped = false;
 
   @override
@@ -28,7 +28,7 @@ class _SearchPageState extends State<SearchPage> {
         _hasTyped = query.isNotEmpty;
         if (_hasTyped) {
           _filteredAcara = widget.acaraList.where((acara) {
-            final nama = (acara.namaKelompok ?? '').toLowerCase().replaceAll(
+            final nama = (acara['namaKelompok'] ?? '').toLowerCase().replaceAll(
               ' ',
               '',
             );
@@ -146,13 +146,13 @@ class _SearchPageState extends State<SearchPage> {
                                 elevation: 3,
                                 child: ListTile(
                                   title: Text(
-                                    acara.namaKelompok ?? 'Tidak ditemukan',
+                                    acara['namaKelompok'] ?? 'Tidak ditemukan',
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
                                   subtitle: Text(
-                                    'Orang: ${acara.anggota!.length}, Pengeluaran: ${acara.pengeluaran!.length}',
+                                    'Orang: ${(acara['anggota'] as List).length}, Pengeluaran: ${(acara['pengeluaran'] as List).length}',
                                   ),
                                 ),
                               );

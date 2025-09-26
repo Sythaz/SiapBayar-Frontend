@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../colors.dart';
-import '../datasources/remote_datasource.dart';
 
 class TambahAcaraPage extends StatefulWidget {
   const TambahAcaraPage({super.key});
@@ -83,11 +82,23 @@ class _TambahAcaraPageState extends State<TambahAcaraPage> {
                               return;
                             }
 
-                            final List<String> anggota = controllers
-                                .map((ctrl) => ctrl.text.trim())
-                                .where((name) => name.isNotEmpty)
-                                .toList();
-  
+                            final List<Map<String, dynamic>> anggota =
+                                controllers
+                                    .map(
+                                      (ctrl) => {
+                                        'anggota': {
+                                          'namaLengkap': ctrl.text.trim(),
+                                        },
+                                      },
+                                    )
+                                    .where(
+                                      (obj) =>
+                                          (obj['anggota']?['namaLengkap'] ?? '')
+                                              .toString()
+                                              .isNotEmpty,
+                                    )
+                                    .toList();
+
                             if (anggota.isEmpty) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
@@ -98,11 +109,12 @@ class _TambahAcaraPageState extends State<TambahAcaraPage> {
                             }
 
                             try {
-                              final kelompok = await RemoteDataSource()
-                                  .createKelompok(
-                                    namaKelompok: nama,
-                                    anggota: anggota,
-                                  );
+                              // Panggil RemoteDataSource sesuai model
+                              // final kelompok = await RemoteDataSource()
+                              //     .createKelompok(
+                              //       namaKelompok: nama,
+                              //       anggota: anggota,
+                              //     );
                               if (mounted) {
                                 Navigator.pop(context, true);
                               }

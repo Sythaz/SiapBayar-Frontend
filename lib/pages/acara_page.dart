@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:siapbayar/colors.dart';
 import 'package:siapbayar/models/patungan_model.dart';
 import 'package:siapbayar/pages/tambah_pengeluaran_page.dart';
 
 class AcaraPage extends StatefulWidget {
-  final List<Kelompok> acaraList;
-  final int kelompokId;
+  final Map<String, dynamic> dataAcara;
 
-  const AcaraPage({
-    super.key,
-    required this.acaraList,
-    required this.kelompokId,
-  });
+  const AcaraPage({super.key, required this.dataAcara});
 
   @override
   State<StatefulWidget> createState() {
@@ -19,23 +15,18 @@ class AcaraPage extends StatefulWidget {
 }
 
 class _AcaraPageState extends State<AcaraPage> {
-  late List<Kelompok> _acaraList;
-  late int _kelompokId;
+  late Map<String, dynamic> _dataAcara;
   late List<Pengeluaran> daftarPengeluaran;
 
   @override
   void initState() {
     super.initState();
-    _acaraList = widget.acaraList;
-    _kelompokId = widget.kelompokId;
-    // Contoh: Ambil pengeluaran dari kelompok yang dipilih
-    final kelompok = _acaraList.firstWhere(
-      (kelompok) => kelompok.id == _kelompokId,
-      orElse: () => Kelompok(pengeluaran: []),
-    );
-    daftarPengeluaran = (kelompok.pengeluaran ?? []).cast<Pengeluaran>();
+    _dataAcara = widget.dataAcara;
 
-    print('daftar pengeluaran: $daftarPengeluaran');
+    final dataPengeluaran = _dataAcara['pengeluaran'] ?? [];
+    daftarPengeluaran = (dataPengeluaran as List)
+        .map((e) => Pengeluaran.fromMap(e as Map<String, dynamic>))
+        .toList();
   }
 
   @override
@@ -50,7 +41,7 @@ class _AcaraPageState extends State<AcaraPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          _acaraList[_kelompokId].namaKelompok ?? 'Tidak ditemukan',
+          _dataAcara['namaKelompok'] ?? 'Tidak ditemukan',
           style: TextStyle(
             color: Colors.black,
             fontSize: 18,
@@ -99,13 +90,16 @@ class _AcaraPageState extends State<AcaraPage> {
                     ),
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
-                      itemCount: (_acaraList[_kelompokId].anggota ?? []).length,
+                      itemCount: (_dataAcara['anggota'] as List).length,
                       itemBuilder: (context, index) {
-                        final relasi = _acaraList[_kelompokId].anggota![index];
+                        final data = _dataAcara['anggota'];
+
                         return Container(
-                          margin: EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 8,
+                          margin: EdgeInsets.only(
+                            right: index == data.length - 1 ? 8 : 8,
+                            left: index == 0 ? 8 : 0,
+                            top: 8,
+                            bottom: 8,
                           ),
                           padding: EdgeInsets.symmetric(
                             horizontal: 16,
@@ -116,11 +110,8 @@ class _AcaraPageState extends State<AcaraPage> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            relasi.anggota?.namaLengkap ?? '-',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.black87,
-                            ),
+                            data[index]['anggota']['namaLengkap'],
+                            style: TextStyle(color: AppColors.black),
                           ),
                         );
                       },
@@ -132,7 +123,7 @@ class _AcaraPageState extends State<AcaraPage> {
             SizedBox(height: 24),
 
             // Tombol Tambah Pengeluaran
-            Container(
+            SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
@@ -142,15 +133,8 @@ class _AcaraPageState extends State<AcaraPage> {
                     context,
                     MaterialPageRoute(
                       builder: (context) => TambahPengeluaranPage(
-                        isEdit: true,
-                        namaKelompok:
-                            _acaraList[_kelompokId].namaKelompok ??
-                            'Tidak ditemukan',
-                        dibuatPada:
-                            _acaraList[_kelompokId].dibuatPada ??
-                            '2000-01-01T23:59:59.319Z',
-                        anggota: _acaraList[_kelompokId].anggota ?? [],
-                        pengeluaran: _acaraList[_kelompokId].pengeluaran ?? [],
+                        isEdit: false,
+                        anggotaList: _dataAcara['anggota'],
                       ),
                     ),
                   );
@@ -211,19 +195,24 @@ class _AcaraPageState extends State<AcaraPage> {
   Widget _buildPengeluaranCard(Pengeluaran pengeluaran) {
     // Format tanggal
     String tanggal = '-';
-    if (pengeluaran.tanggalPengeluaran != null) {
+
+    if (pengeluaran.dibuatPada != null) {
       try {
-        final dt = DateTime.parse(pengeluaran.tanggalPengeluaran!);
+        final dt = pengeluaran.dibuatPada!;
         tanggal =
             '${dt.day} ${_bulanIndo(dt.month)}, ${dt.year}, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
       } catch (_) {
-        tanggal = pengeluaran.tanggalPengeluaran!;
+        tanggal = pengeluaran.dibuatPada!.toIso8601String();
       }
     }
+
+    String deskripsiPembelian = pengeluaran.deskripsi ?? '-';
+
     // Format total
     String total = pengeluaran.jumlahTotal != null
         ? _formatRupiah(pengeluaran.jumlahTotal!)
         : '-';
+
     // Nama pembayar
     String namaPembayar =
         pengeluaran.pembayaran != null && pengeluaran.pembayaran!.isNotEmpty
@@ -239,113 +228,153 @@ class _AcaraPageState extends State<AcaraPage> {
               .join(', ')
         : '-';
 
-    return Container(
-      margin: EdgeInsets.only(bottom: 12),
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
+    return InkWell(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => TambahPengeluaranPage(
+            isEdit: true,
+            namaKelompok: deskripsiPembelian,
+            dibuatPada: tanggal,
+            pengeluaran: pengeluaran,
+            anggotaList: _dataAcara['anggota'],
+          ),
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header dengan tanggal dan total
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Color(0xFF2D5A5A),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  tanggal,
+      child: Container(
+        margin: EdgeInsets.only(bottom: 12),
+        padding: EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(16.0),
+          border: Border.all(color: AppColors.primary),
+          boxShadow: [
+            BoxShadow(
+              offset: const Offset(0, 4),
+              color: AppColors.grey.withAlpha((0.5 * 255).toInt()),
+              blurRadius: 10.0,
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  deskripsiPembelian,
                   style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Color(0xFF2D5A5A),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  'Total: $total',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+              ],
+            ),
+
+            Divider(
+              color: AppColors.primary,
+              thickness: 1.1,
+              radius: BorderRadius.circular(50),
+            ),
+
+            // Header dengan tanggal dan total
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Color(0xFF2D5A5A),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    tanggal,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          SizedBox(height: 12),
-
-          // Informasi Pembayar
-          Text(
-            'Pembayar:',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Colors.black87,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 8.0, bottom: 4.0),
-            child: Text(
-              namaPembayar,
-              style: TextStyle(fontSize: 14, color: Colors.black54),
-            ),
-          ),
-          SizedBox(height: 8),
-
-          // Informasi Untuk
-          Text(
-            'Untuk:',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Colors.black87,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 8.0, bottom: 4.0),
-            child: Text(
-              namaPenanggung,
-              style: TextStyle(fontSize: 14, color: Colors.black54),
-            ),
-          ),
-          SizedBox(height: 16),
-
-          // Tombol Lihat Detail
-          Container(
-            width: double.infinity,
-            height: 40,
-            child: OutlinedButton(
-              onPressed: () {
-                // Aksi lihat detail
-                _showDetailDialog(pengeluaran);
-              },
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: Colors.grey[400]!),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Color(0xFF2D5A5A),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    'Total: $total',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
+              ],
+            ),
+            SizedBox(height: 12),
+
+            // Informasi Pembayar
+            Text(
+              'Pembayar:',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
               ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4.0),
               child: Text(
-                'Lihat detail',
-                style: TextStyle(color: Colors.black54, fontSize: 14),
+                namaPembayar,
+                style: TextStyle(fontSize: 14, color: Color(0xFF1F1F1F)),
               ),
             ),
-          ),
-        ],
+            SizedBox(height: 8),
+
+            // Informasi Untuk
+            Text(
+              'Untuk:',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4.0),
+              child: Text(
+                namaPenanggung,
+                style: TextStyle(fontSize: 14, color: Color(0xFF1F1F1F)),
+              ),
+            ),
+            SizedBox(height: 16),
+
+            // Tombol Lihat Detail
+            Container(
+              width: double.infinity,
+              height: 40,
+              child: OutlinedButton(
+                onPressed: () {
+                  // Aksi lihat detail
+                  _showDetailDialog(pengeluaran);
+                },
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: AppColors.primary, width: 1.5),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+                child: Text(
+                  'Lihat detail',
+                  style: TextStyle(color: AppColors.primary, fontSize: 14),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
     // Helper format bulan Indonesia
@@ -361,7 +390,7 @@ class _AcaraPageState extends State<AcaraPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Tanggal: ${pengeluaran.tanggalPengeluaran ?? '-'}'),
+              Text('Tanggal: ${pengeluaran.dibuatPada ?? '-'}'),
               SizedBox(height: 8),
               Text('Total: ${pengeluaran.jumlahTotal ?? '-'}'),
               SizedBox(height: 8),
