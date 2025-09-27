@@ -31,6 +31,28 @@ class RemoteDataSource {
     }
   }
 
+  Future<String> createAnggota({
+    required String nama,
+    required int kelompokId,
+  }) async {
+    final url = Uri.parse('$baseUrl/kelompok/$kelompokId/anggota');
+
+    final response = await http.post(
+      url,
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode({'namaLengkap': nama}),
+    );
+
+    if (response.statusCode == 200) {
+      final responseData = jsonDecode(response.body);
+      return responseData['namaLengkap'] ?? '';
+    } else {
+      throw Exception('Gagal membuat anggota: ${response.statusCode}');
+    }
+  }
+
   // Fungsi POST untuk membuat pengeluaran
   Future<Pengeluaran> createPengeluaran({
     required int kelompokId,

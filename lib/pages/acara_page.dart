@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:siapbayar/colors.dart';
 import 'package:siapbayar/datasources/remote_datasource.dart';
 import 'package:siapbayar/models/patungan_model.dart';
+import 'package:siapbayar/pages/tambah_anggota_modal.dart';
 import 'package:siapbayar/pages/tambah_pengeluaran_page.dart';
 
 import '../helpers/format_bulan.dart';
@@ -28,6 +29,23 @@ class _AcaraPageState extends State<AcaraPage> {
     super.initState();
     _dataAcara = widget.dataAcara;
     _fetchPengeluaran();
+  }
+
+  Future<void> _showTambahAnggotaSheet(BuildContext context) async {
+    final result = await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return TambahAnggotaModal(acaraId: _dataAcara['id']);
+      },
+    );
+
+    if (result != null) {
+      await _fetchPengeluaran();
+    }
   }
 
   Future<void> _fetchPengeluaran() async {
@@ -98,9 +116,16 @@ class _AcaraPageState extends State<AcaraPage> {
                     color: Color(0xFF2D5A5A),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.add, color: Colors.white, size: 24),
+                  child: IconButton(
+                    onPressed: () async {
+                      _showTambahAnggotaSheet(context);
+                    },
+                    icon: Icon(Icons.add, size: 24),
+                    color: Colors.white,
+                  ),
                 ),
                 SizedBox(width: 12),
+
                 // Container scrollable anggota
                 Expanded(
                   child: Container(
